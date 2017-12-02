@@ -3,7 +3,18 @@
 #include <thread>
 #include <iostream>
 #include <c++/cmath>
+#include <stb_image.h>
 #include "ShadersLoader.h"
+
+GLuint getTexture(char const *filename);
+
+GLuint getProgram(char const *vertexFilePath, char const *fragmentFilePath) ;
+
+GLuint getVaoTexture(const void *coordinates, GLsizeiptr sizeCoordinates,
+                     const void *indexes, GLsizeiptr sizeIndexes) ;
+
+GLuint getVaoColor(const void *coordinates, GLsizeiptr sizeCoordinates,
+                     const void *indexes, GLsizeiptr sizeIndexes) ;
 
 int main() {
     glfwInit();
@@ -33,7 +44,171 @@ int main() {
     }
 #endif
 
-    auto vertexSource = shaders::loadShaderSourceFromFile("resources/shaders/vertex.glsl").c_str();
+    auto humanProgram = getProgram("resources/shaders/vertex.glsl", "resources/shaders/fragment.glsl");
+    auto shaderProgram = getProgram("resources/shaders/vertexTexture.glsl", "resources/shaders/fragmentTexture.glsl");
+
+
+    GLfloat colorHead[] = {
+            1.0f, 1.0f, 0.0f
+    };
+    GLfloat colorHands[] = {
+            0.6f, 0.8f, 0.4f
+    };
+    GLfloat colorShoes[] = {
+            0.0f, 0.0f, 0.0f
+    };
+
+    GLfloat coordinatesHuman[] = {
+            -0.1f, 0.5f, colorHands[0], colorHands[1], colorHands[2],
+            -0.1f, 0.45f, colorHands[0], colorHands[1], colorHands[2],
+            -0.3f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
+            -0.28f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
+            0.1f, 0.5f, colorHands[0], colorHands[1], colorHands[2],
+            0.1f, 0.45f, colorHands[0], colorHands[1], colorHands[2],
+            0.3f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
+            0.28f, -0.1f, colorHands[0], colorHands[1], colorHands[2],  //7
+//
+            -0.07f, -0.6f, colorShoes[0], colorShoes[1], colorShoes[2],
+            -0.07f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
+            -0.2f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
+            0.07f, -0.6f, colorShoes[0], colorShoes[1], colorShoes[2],
+            0.07f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
+            0.2f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],  //13
+
+            0.0f, 0.5f, colorHead[0], colorHead[1], colorHead[2],
+            -0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
+            0.0f, 0.75f, colorHead[0], colorHead[1], colorHead[2],
+            0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
+    };
+    GLuint indexesHuman[] = {
+            0, 1, 2,  1, 2, 3,  4, 5, 6,  5, 6, 7,  //Hands
+            8, 9, 10,  11, 12, 13,  //Shoes
+            14, 15, 16,  14, 16, 17,  //Head
+    };
+    GLuint vaoHuman = getVaoColor(coordinatesHuman, sizeof(coordinatesHuman), indexesHuman, sizeof(indexesHuman));
+
+
+    GLfloat coordinatesBody[] = {
+            -0.1f, 0.5f, 0.0f, 1.0f,
+            -0.1f, -0.1f, 0.0f, 0.0f,
+            0.1f, 0.5f, 1.0f, 1.0f,
+            0.1f, -0.1f, 1.0f, 0.0f,
+    };
+    GLuint indexesBody[] = {
+            0, 1, 2, 1, 2, 3,
+    };
+    GLuint vaoBody = getVaoTexture(coordinatesBody, sizeof(coordinatesBody), indexesBody, sizeof(indexesBody));
+
+    GLfloat coordinatesPents[] = {
+            -0.1f, -0.1f, 1.0f, 0.0f,
+            -0.12f, -0.65f, 0.0f, 0.0f,
+            -0.05f, -0.1f, 1.0f, 1.0f,
+            -0.07f, -0.65f, 0.2f, 0.0f,
+
+            0.1f, -0.1f, 1.0f, 1.0f,
+            0.12f, -0.65f, 1.0f, 0.0f,
+            0.05f, -0.1f, 0.6f, 1.0f,
+            0.07f, -0.65f, 0.8f, 0.0f,
+    };
+    GLuint indexesPents[] = {
+            0, 1, 2, 1, 2, 3,
+            4, 5, 6, 5, 6, 7,
+    };
+    GLuint vaoPents = getVaoTexture(coordinatesPents, sizeof(coordinatesPents), indexesPents, sizeof(indexesPents));
+
+
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+
+    GLuint texture = getTexture("resources/kletka2.jpg");  // texture.jpeg
+    GLuint texturePents = getTexture("resources/texture.jpeg");
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        glClearColor(0.4f, 0.4f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glUseProgram(humanProgram);
+        glBindVertexArray(vaoHuman);
+        glDrawElements(GL_TRIANGLES, sizeof(coordinatesHuman), GL_UNSIGNED_INT, 0);
+
+
+        glUseProgram(shaderProgram);
+        glUniform1i(glGetUniformLocation(shaderProgram, "sampler"), 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindVertexArray(vaoBody);
+        glDrawElements(GL_TRIANGLES, sizeof(coordinatesBody), GL_UNSIGNED_INT, 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texturePents);
+        glBindVertexArray(vaoPents);
+        glDrawElements(GL_TRIANGLES, sizeof(coordinatesPents), GL_UNSIGNED_INT, 0);
+
+        glfwSwapBuffers(window);
+        std::this_thread::sleep_for(std::chrono::nanoseconds(15000));
+    }
+
+    glfwTerminate();
+    return 0;
+}
+
+GLuint getVaoColor(const void *coordinates, GLsizeiptr sizeCoordinates,
+                     const void *indexes, GLsizeiptr sizeIndexes) {
+    GLuint vbo;
+    GLuint ebo;
+    GLuint vao;
+
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeCoordinates, coordinates, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void *) (2 * sizeof(float)));
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIndexes, indexes, GL_STATIC_DRAW);
+
+    return vao;
+}
+
+GLuint getVaoTexture(const void *coordinates, GLsizeiptr sizeCoordinates,
+                     const void *indexes, GLsizeiptr sizeIndexes) {
+    GLuint vbo;
+    GLuint ebo;
+    GLuint vao;
+
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeCoordinates, coordinates, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (void *) (2 * sizeof(float)));
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeIndexes, indexes, GL_STATIC_DRAW);
+
+    return vao;
+}
+
+GLuint getProgram(char const *vertexFilePath, char const *fragmentFilePath) {
+    auto vertexSource = shaders::loadShaderSourceFromFile(vertexFilePath).c_str();
     auto vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexSource, NULL);
     glCompileShader(vertexShader);
@@ -47,7 +222,7 @@ int main() {
     }
 
     auto fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    auto fragmentShaderSourCe = shaders::loadShaderSourceFromFile("resources/shaders/fragment.glsl");
+    auto fragmentShaderSourCe = shaders::loadShaderSourceFromFile(fragmentFilePath);
     const char *fragmentShaderSourceNative = fragmentShaderSourCe.c_str();
     glShaderSource(fragmentShader, 1, &fragmentShaderSourceNative, nullptr);
     glCompileShader(fragmentShader);
@@ -59,7 +234,7 @@ int main() {
         return 0;
     }
 
-    auto shaderProgram = glCreateProgram();
+    GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
@@ -80,109 +255,27 @@ int main() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    return shaderProgram;
+}
 
-    GLfloat colorHead[] = {
-            1.0f, 1.0f, 0.0f
-    };
-    GLfloat colorHands[] = {
-            0.6f, 0.8f, 0.4f
-    };
-    GLfloat colorBody[] = {
-            0.6f, 0.3f, 0.3f
-    };
-    GLfloat colorPents[] = {
-            0.1f, 0.3f, 0.3f
-    };
-    GLfloat colorShoes[] = {
-            0.0f, 0.0f, 0.0f
-    };
-    
-    GLfloat coordinates[] = {
-            -0.1f, 0.5f, colorHands[0], colorHands[1], colorHands[2],
-            -0.1f, 0.45f, colorHands[0], colorHands[1], colorHands[2],
-            -0.3f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
-            -0.28f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
-            0.1f, 0.5f, colorHands[0], colorHands[1], colorHands[2],
-            0.1f, 0.45f, colorHands[0], colorHands[1], colorHands[2],
-            0.3f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
-            0.28f, -0.1f, colorHands[0], colorHands[1], colorHands[2],
+GLuint getTexture(char const *filename) {
+    GLuint texturePents;
+    glGenTextures(1, &texturePents);
+    glBindTexture(GL_TEXTURE_2D, texturePents);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-            -0.1f, 0.5f, colorBody[0], colorBody[1], colorBody[2],
-            -0.1f, -0.1f, colorBody[0], colorBody[1], colorBody[2],
-            0.1f, 0.5f, colorBody[0], colorBody[1], colorBody[2],
-            0.1f, -0.1f, colorBody[0], colorBody[1], colorBody[2],
+    GLint texturePentsWeight;
+    GLint texturePentsHeight;
+    GLint texturePentsChannelsCount;
+    auto dataPents = stbi_load(filename, &texturePentsWeight, &texturePentsHeight, &texturePentsChannelsCount,
+                               STBI_rgb);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texturePentsWeight, texturePentsHeight, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 dataPents);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(dataPents);
 
-            -0.07f, -0.6f, colorShoes[0], colorShoes[1], colorShoes[2],
-            -0.07f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
-            -0.2f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
-            0.07f, -0.6f, colorShoes[0], colorShoes[1], colorShoes[2],
-            0.07f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
-            0.2f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
-
-            -0.1f, -0.1f, colorPents[0], colorPents[1], colorPents[2],
-            -0.12f, -0.65f, colorPents[0], colorPents[1], colorPents[2],
-            -0.05f, -0.1f, colorPents[0], colorPents[1], colorPents[2],
-            -0.07f, -0.65f, colorPents[0], colorPents[1], colorPents[2],
-            0.1f, -0.1f, colorPents[0], colorPents[1], colorPents[2],
-            0.12f, -0.65f, colorPents[0], colorPents[1], colorPents[2],
-            0.05f, -0.1f, colorPents[0], colorPents[1], colorPents[2],
-            0.07f, -0.65f, colorPents[0], colorPents[1], colorPents[2],
-
-            0.0f, 0.5f, colorHead[0], colorHead[1], colorHead[2],
-            -0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
-            0.0f, 0.75f, colorHead[0], colorHead[1], colorHead[2],
-            0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
-
-    };
-    GLuint indexes[] = {
-            0, 1, 2,  1, 2, 3,  4, 5, 6,  5, 6, 7,
-            8, 9, 10,  9, 10, 11,
-            12, 13, 14,  15, 16, 17,
-            18, 19, 20,  19, 20, 21,
-            22, 23, 24,  23, 24, 25,
-            26, 27, 28,  26, 28, 29
-    };
-
-    GLuint vbo;
-    GLuint ebo;
-    GLuint vao;
-
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(coordinates), coordinates, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, 0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void *) (2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexes), indexes, GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    glViewport(0, 0, width, height);
-
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        glClearColor(0.4f, 0.4f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glUseProgram(shaderProgram);
-        glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, sizeof(coordinates), GL_UNSIGNED_INT, 0);
-
-        glfwSwapBuffers(window);
-        std::this_thread::sleep_for(std::chrono::nanoseconds(15000));
-    }
-
-    glfwTerminate();
-    return 0;
+    return texturePents;
 }
