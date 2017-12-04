@@ -45,12 +45,20 @@ int main() {
 #endif
 
     auto humanProgram = getProgram("resources/shaders/vertex.glsl", "resources/shaders/fragment.glsl");
-    auto shaderProgram = getProgram("resources/shaders/vertexTexture.glsl", "resources/shaders/fragmentTexture.glsl");
+    auto circleProgram = getProgram("resources/shaders/vertex_circle.glsl", "resources/shaders/fragment_circle.glsl");
+    auto textureProgram = getProgram("resources/shaders/vertexTexture.glsl", "resources/shaders/fragmentTexture.glsl");
 
-
-    GLfloat colorHead[] = {
-            1.0f, 1.0f, 0.0f
+    GLfloat coordinatesNature[] = {
+            -1.0f, -1.0f, 0.0f, 0.0f,
+            -1.0f, 1.0f,  0.0f, 1.0f,
+            1.0f, 1.0f,   1.0f, 1.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
     };
+    GLuint texturesNature[] = {
+            0, 1, 2, 2, 3, 0
+    };
+    GLuint vaoNature = getVaoTexture(coordinatesNature, sizeof(coordinatesNature), texturesNature, sizeof(texturesNature));
+
     GLfloat colorHands[] = {
             0.6f, 0.8f, 0.4f
     };
@@ -74,16 +82,10 @@ int main() {
             0.07f, -0.6f, colorShoes[0], colorShoes[1], colorShoes[2],
             0.07f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],
             0.2f, -0.72f, colorShoes[0], colorShoes[1], colorShoes[2],  //13
-
-            0.0f, 0.5f, colorHead[0], colorHead[1], colorHead[2],
-            -0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
-            0.0f, 0.75f, colorHead[0], colorHead[1], colorHead[2],
-            0.07f, 0.65f, colorHead[0], colorHead[1], colorHead[2],
     };
     GLuint indexesHuman[] = {
             0, 1, 2,  1, 2, 3,  4, 5, 6,  5, 6, 7,  //Hands
             8, 9, 10,  11, 12, 13,  //Shoes
-            14, 15, 16,  14, 16, 17,  //Head
     };
     GLuint vaoHuman = getVaoColor(coordinatesHuman, sizeof(coordinatesHuman), indexesHuman, sizeof(indexesHuman));
 
@@ -117,27 +119,51 @@ int main() {
     GLuint vaoPents = getVaoTexture(coordinatesPents, sizeof(coordinatesPents), indexesPents, sizeof(indexesPents));
 
 
+    GLfloat coordinatesHead[] = {
+            0.0f, 0.64f, 1.0f, 0.95f, 0.55f
+    };
+
+    GLuint indexesHead[] = {
+            0
+    };
+    GLuint vaoHead = getVaoColor(coordinatesHead, sizeof(coordinatesHead), indexesHead, sizeof(indexesHead));
+
 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-
+    stbi_set_flip_vertically_on_load(true);
+    GLuint textureNature = getTexture("resources/nature.jpg");
     GLuint texture = getTexture("resources/kletka2.jpg");  // texture.jpeg
     GLuint texturePents = getTexture("resources/texture.jpeg");
+
+    glViewport(0, 0, width, height);
+    glPointSize(150);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0.4f, 0.4f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        glUseProgram(textureProgram);
+        glUniform1i(glGetUniformLocation(textureProgram, "sampler"), 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureNature);
+        glBindVertexArray(vaoNature);
+        glDrawElements(GL_TRIANGLES, sizeof(coordinatesHead), GL_UNSIGNED_INT, 0);
+
         glUseProgram(humanProgram);
         glBindVertexArray(vaoHuman);
         glDrawElements(GL_TRIANGLES, sizeof(coordinatesHuman), GL_UNSIGNED_INT, 0);
 
+        glUseProgram(circleProgram);
+        glUniform2f(glGetUniformLocation(circleProgram, "uResolution"), width, height);
+        glBindVertexArray(vaoHead);
+        glDrawElements(GL_POINTS, 1, GL_UNSIGNED_INT, 0);
 
-        glUseProgram(shaderProgram);
-        glUniform1i(glGetUniformLocation(shaderProgram, "sampler"), 0);
+        glUseProgram(textureProgram);
+        glUniform1i(glGetUniformLocation(textureProgram, "sampler"), 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -172,7 +198,7 @@ GLuint getVaoColor(const void *coordinates, GLsizeiptr sizeCoordinates,
     glBufferData(GL_ARRAY_BUFFER, sizeCoordinates, coordinates, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void *) (2 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void *) (2 * sizeof(float)));
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
 
